@@ -1,654 +1,352 @@
-```html
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="my" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phone Detail Checker</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-    <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; }
-        
-        /* Custom modal transition styles */
-        .modal {
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            opacity: 0;
-            pointer-events: none;
-            transform: scale(0.95);
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#DC2626', // Red
+                        primaryDark: '#B91C1C',
+                    }
+                }
+            }
         }
-        .modal.active {
-            opacity: 1;
-            pointer-events: auto;
-            transform: scale(1);
-        }
-        .backdrop {
-            transition: opacity 0.3s ease;
-            opacity: 0;
-            pointer-events: none;
-        }
-        .backdrop.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-    </style>
+    </script>
+    <!-- Firebase SDKs (Compat version for single file ease) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="text-gray-800 antialiased relative min-h-screen">
+<body class="bg-white text-gray-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Login Screen -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 absolute inset-0 z-50">
-        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100 text-center">
-            <div>
-                <div class="mx-auto h-20 w-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <i class="fa-solid fa-mobile-screen-button text-4xl"></i>
-                </div>
-                <h2 class="mt-2 text-3xl font-extrabold text-gray-900">DetailChecker</h2>
-                <p class="mt-2 text-sm text-gray-500">
-                    Sign in to securely store and access your SN codes across all your devices.
-                </p>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center">
+            <div class="w-16 h-16 bg-red-50 text-primary rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                📱
             </div>
-            <div class="mt-8 space-y-6">
-                <button id="googleLoginBtn" onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Continue with Google
-                </button>
-                <div id="loginError" class="text-red-600 text-sm hidden font-medium mt-2 bg-red-50 p-2 rounded-md border border-red-100"></div>
-            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Detail Checker</h1>
+            <p class="text-gray-500 text-sm mb-6">Sign in to securely store and access your SN codes across all your devices.</p>
+            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                Continue with Google
+            </button>
+            <p id="loginError" class="text-red-500 text-sm mt-4 hidden"></p>
         </div>
     </div>
 
-    <!-- Main App Screen (Hidden by default until logged in) -->
-    <div id="appScreen" class="hidden min-h-screen pb-20">
-        <nav class="bg-red-600 text-white shadow-md sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <!-- Logo / Title -->
-                    <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
-                        <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
-                        <span class="font-bold text-xl hidden md:block">DetailChecker</span>
-                    </div>
-                    
-                    <div class="flex flex-1 items-center justify-end gap-3 md:gap-6">
-                        <!-- Search Bar -->
-                        <div class="flex-1 max-w-xs relative ml-4">
-                            <label for="search" class="sr-only">Search</label>
-                            <div class="relative text-gray-400 focus-within:text-gray-600">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fa-solid fa-magnifying-glass"></i>
-                                </div>
-                                <input id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-white text-sm transition-colors duration-200" placeholder="Search SN..." type="search">
-                            </div>
-                        </div>
+    <!-- MAIN APP INTERFACE -->
+    <div id="mainApp" class="flex flex-col min-h-screen hidden">
+        <!-- Navbar -->
+        <nav class="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl font-black tracking-wider text-primary">DETAIL CHECKER</span>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-md">
+                    <input type="text" id="searchInput" oninput="filterSN()" placeholder="Search SN code..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition">
+                </div>
 
-                        <!-- User Profile & Logout -->
-                        <div class="flex items-center gap-3 pl-3 md:pl-4 border-l border-red-500">
-                            <div class="hidden sm:flex flex-col text-right">
-                                <span id="userName" class="text-sm font-semibold leading-tight truncate max-w-[120px]">User</span>
-                                <span id="userEmail" class="text-xs text-red-200 leading-tight truncate max-w-[120px]"></span>
-                            </div>
-                            <img id="userAvatar" src="" alt="Profile" class="w-8 h-8 rounded-full border border-white hidden">
-                            <button onclick="logout()" class="text-white hover:text-red-200 transition-colors ml-1" title="Log out">
-                                <i class="fa-solid fa-right-from-bracket text-lg"></i>
-                            </button>
-                        </div>
-                    </div>
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-2">
+                    <button onclick="openAddModal()" class="bg-primary hover:bg-primaryDark text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-1">
+                        <span>+ Add SN</span>
+                    </button>
+                    <button onclick="openRemoveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        <span>Remove Sold</span>
+                    </button>
+                    <button onclick="logout()" class="text-gray-400 hover:text-red-600 p-2 text-sm font-medium" title="Logout">
+                        🚪
+                    </button>
                 </div>
             </div>
         </nav>
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h1 class="text-2xl font-bold text-gray-900 border-b-2 border-red-600 pb-1 inline-block">My Devices</h1>
-                
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button onclick="openRemoveModal()" class="flex-1 sm:flex-none justify-center bg-white border-2 border-red-600 text-red-600 hover:bg-red-50 font-semibold py-2 px-3 sm:px-4 rounded-lg shadow-sm hover:shadow transition duration-200 flex items-center gap-2">
-                        <i class="fa-solid fa-trash-can"></i>
-                        <span>Remove</span>
-                    </button>
-                    <button onclick="openAddModal()" class="flex-1 sm:flex-none justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg shadow-md hover:shadow-lg transition duration-200 flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Add SN</span>
-                    </button>
-                </div>
+        <!-- Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-6 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-900">Saved SN Codes</h2>
+                <span id="totalCount" class="text-sm text-gray-500">0 items</span>
             </div>
 
-            <!-- Phone List Container -->
-            <div id="loadingIndicator" class="text-center py-12 text-gray-500 hidden">
-                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-red-600 mb-4"></i>
-                <p>Loading devices...</p>
-            </div>
-
-            <div id="phoneGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden">
-                <!-- Cards will be injected here by JS -->
+            <!-- SN List Grid -->
+            <div id="snGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <!-- Dynamic cards will appear here -->
             </div>
             
-            <div id="emptyState" class="hidden text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300 mt-4">
-                <i class="fa-solid fa-box-open text-5xl text-gray-400 mb-4"></i>
-                <h3 class="text-lg font-medium text-gray-900">No SN Codes found</h3>
-                <p class="mt-1 text-gray-500">Click the "+ Add SN" button to register a new device.</p>
+            <div id="emptyState" class="text-center py-16 hidden">
+                <p class="text-gray-400 text-sm">No SN codes saved yet. Click "+ Add SN" to start.</p>
             </div>
-
         </main>
     </div>
 
-    <!-- Add Modal Backdrop -->
-    <div id="addModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-        <!-- Add Modal Content -->
-        <div id="addModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-red-600 px-6 py-4 flex justify-between items-center text-white">
-                <h2 class="text-xl font-bold">Add New Device</h2>
-                <button onclick="closeAddModal()" class="text-white hover:text-red-200 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
+    <!-- ADD SN MODAL -->
+    <div id="addModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Add New SN Detail</h3>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             </div>
-            
-            <div class="p-6 overflow-y-auto">
-                <form id="addForm" class="space-y-4">
-                    <div>
-                        <label for="snCode" class="block text-sm font-medium text-gray-700">SN Code</label>
-                        <input type="text" id="snCode" required placeholder="e.g. axb12" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
-                    </div>
-                    
-                    <div>
-                        <label for="phoneModel" class="block text-sm font-medium text-gray-700">Phone Model</label>
-                        <input type="text" id="phoneModel" required placeholder="e.g. iPhone 13 Pro" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
-                    </div>
-                    
-                    <div>
-                        <label for="errorDiscuss" class="block text-sm font-medium text-gray-700">Error Discuss</label>
-                        <textarea id="errorDiscuss" rows="3" required placeholder="Describe the issue..." class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors"></textarea>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="boughtPrice" class="block text-sm font-medium text-gray-700">Bought Price</label>
-                            <input type="number" id="boughtPrice" required placeholder="0" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
-                        </div>
-                        <div>
-                            <label for="sellPrice" class="block text-sm font-medium text-gray-700">Sell Price</label>
-                            <input type="number" id="sellPrice" required placeholder="0" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
-                        </div>
-                    </div>
-                    
-                    <div id="formError" class="text-red-600 text-sm hidden font-medium mt-2 bg-red-50 p-2 rounded-md border border-red-100"></div>
-                </form>
-            </div>
-            
-            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
-                <button type="button" onclick="closeAddModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium">Cancel</button>
-                <button type="button" id="saveBtn" onclick="saveDevice()" class="px-6 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition-colors font-medium shadow-md flex items-center gap-2">
-                    <span>Save</span>
-                    <i id="saveSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Detail Modal Backdrop -->
-    <div id="detailModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-        <!-- Detail Modal Content -->
-        <div id="detailModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="bg-red-600 px-6 py-5 flex justify-between items-center text-white relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 opacity-10">
-                    <i class="fa-solid fa-mobile-screen text-9xl"></i>
-                </div>
-                <div class="relative z-10">
-                    <p class="text-red-200 text-xs font-semibold uppercase tracking-wider mb-1">SN Code</p>
-                    <h2 id="detailSnCode" class="text-3xl font-black tracking-tight"></h2>
-                </div>
-                <button onclick="closeDetailModal()" class="text-white hover:text-red-200 transition-colors relative z-10 self-start">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-6 space-y-5 bg-gray-50 flex-1">
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Phone Model</h3>
-                    <p id="detailModel" class="text-lg font-semibold text-gray-800"></p>
-                </div>
-                
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Error Discuss</h3>
-                    <p id="detailError" class="text-gray-700 whitespace-pre-wrap"></p>
-                </div>
-                
-                <div class="flex gap-4">
-                    <div class="flex-1 bg-white p-4 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-red-500">
-                        <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-1">Bought Price</h3>
-                        <p class="text-lg font-bold text-gray-800">
-                            <span class="text-sm text-gray-500 mr-1">$</span><span id="detailBought"></span>
-                        </p>
-                    </div>
-                    <div class="flex-1 bg-white p-4 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-                        <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-1">Sell Price</h3>
-                        <p class="text-lg font-bold text-gray-800">
-                            <span class="text-sm text-gray-500 mr-1">$</span><span id="detailSell"></span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white px-6 py-4 flex justify-center border-t border-gray-200">
-                <button onclick="closeDetailModal()" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors font-semibold">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Remove Modal Backdrop -->
-    <div id="removeModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-        <!-- Remove Modal Content -->
-        <div id="removeModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="bg-red-600 px-6 py-4 flex justify-between items-center text-white">
-                <h2 class="text-xl font-bold">Remove Sold Item</h2>
-                <button onclick="closeRemoveModal()" class="text-white hover:text-red-200 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">Enter the SN Code of the device that has been sold to remove it from the database.</p>
+            <form id="addForm" onsubmit="saveSN(event)" class="space-y-4">
                 <div>
-                    <label for="removeSnCode" class="block text-sm font-medium text-gray-700">SN Code</label>
-                    <input type="text" id="removeSnCode" required placeholder="e.g. axb12" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">SN Code (ဥပမာ - axb12)</label>
+                    <input type="text" id="snCodeInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
                 </div>
-                <div id="removeFormError" class="text-red-600 text-sm hidden font-medium mt-2 bg-red-50 p-2 rounded-md border border-red-100"></div>
-                <div id="removeFormSuccess" class="text-green-700 text-sm hidden font-medium mt-2 bg-green-50 p-2 rounded-md border border-green-200"></div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Phone Model</label>
+                    <input type="text" id="phoneModelInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Error Discuss</label>
+                    <textarea id="errorDiscussInput" rows="2" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Bought Price</label>
+                        <input type="number" id="boughtPriceInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Sell Price</label>
+                        <input type="number" id="sellPriceInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="closeAddModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>
+                    <button type="submit" class="bg-primary hover:bg-primaryDark text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REMOVE SOLD ITEM MODAL -->
+    <div id="removeModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Remove Sold Item</h3>
+                <button onclick="closeRemoveModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             </div>
-            
-            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
-                <button type="button" onclick="closeRemoveModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium">Cancel</button>
-                <button type="button" id="confirmRemoveBtn" onclick="removeDevice()" class="px-6 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition-colors font-medium shadow-md flex items-center gap-2">
-                    <span>Remove</span>
-                    <i id="removeSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
-                </button>
+            <p class="text-xs text-gray-500 mb-4">ရောင်းထွက်သွားသော ဖုန်း၏ SN Code ကိုရိုက်ထည့်၍ ဖျက်ဆီးနိုင်ပါသည်။</p>
+            <form onsubmit="removeSN(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Enter SN Code</label>
+                    <input type="text" id="removeSnInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" placeholder="e.g. axb12">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeRemoveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>
+                    <button type="submit" class="bg-primary hover:bg-primaryDark text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm">Remove</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DETAIL VIEW MODAL -->
+    <div id="detailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 id="detailSnTitle" class="text-lg font-bold text-primary"></h3>
+                <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <span class="text-gray-500 font-medium">Phone Model:</span>
+                    <span id="detailModel" class="font-semibold text-gray-800"></span>
+                </div>
+                <div class="bg-gray-50 p-2.5 rounded-lg">
+                    <span class="text-gray-500 font-medium block mb-1">Error Discuss:</span>
+                    <p id="detailError" class="text-gray-800 bg-white p-2 rounded border border-gray-100"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-50 p-2.5 rounded-lg">
+                        <span class="text-gray-500 font-medium block text-xs">Bought Price</span>
+                        <span id="detailBought" class="font-bold text-gray-800"></span>
+                    </div>
+                    <div class="bg-gray-50 p-2.5 rounded-lg">
+                        <span class="text-gray-500 font-medium block text-xs">Sell Price</span>
+                        <span id="detailSell" class="font-bold text-primary"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeDetailModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium">Close</button>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        const customToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let db, auth;
-        let currentUserUid = null;
-        let phonesData = []; 
-        let collectionRef = null;
-        let unsubscribeSnapshot = null;
-
-        async function initApp() {
-            try {
-                const firebaseConfig = JSON.parse(firebaseConfigStr);
-                if (Object.keys(firebaseConfig).length === 0) throw new Error("Firebase config is missing");
-                
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                // Listen for Auth changes to switch between Login and App Dashboard
-                onAuthStateChanged(auth, (user) => {
-                    if (user && !user.isAnonymous) {
-                        // User is logged in with an actual account (Google)
-                        currentUserUid = user.uid;
-                        showAppScreen(user);
-                        setupRealtimeListener();
-                    } else {
-                        // User is signed out or anonymous (show login screen)
-                        currentUserUid = null;
-                        if (unsubscribeSnapshot) {
-                            unsubscribeSnapshot();
-                            unsubscribeSnapshot = null;
-                        }
-                        showLoginScreen();
-                    }
-                });
-
-                // Satisfy environment mandatory auth requirement
-                if (customToken) {
-                    await signInWithCustomToken(auth, customToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-            } catch (error) {
-                console.error("Initialization error:", error);
-                document.getElementById('loginError').textContent = "Connection Error: " + error.message;
-                document.getElementById('loginError').classList.remove('hidden');
-            }
-        }
-
-        window.loginWithGoogle = async function() {
-            const provider = new GoogleAuthProvider();
-            const btn = document.getElementById('googleLoginBtn');
-            const errDiv = document.getElementById('loginError');
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Connecting...';
-            errDiv.classList.add('hidden');
-            
-            try {
-                await signInWithPopup(auth, provider);
-                // Auth state observer will automatically trigger showAppScreen
-            } catch (error) {
-                console.error("Login error:", error);
-                errDiv.textContent = "Sign in failed. Please try again.";
-                errDiv.classList.remove('hidden');
-                
-                btn.disabled = false;
-                btn.innerHTML = `
-                    <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Continue with Google
-                `;
-            }
+    <!-- FIREBASE & APP LOGIC -->
+    <script>
+        // Your Firebase Configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDGEuslNiWbZlEAKDnnKnBlaqwVI_GSjug",
+          authDomain: "phonedetailchecker.firebaseapp.com",
+          projectId: "phonedetailchecker",
+          storageBucket: "phonedetailchecker.firebasestorage.app",
+          messagingSenderId: "778068599899",
+          appId: "1:778068599899:web:90c4c1d71075bd2ba00b7e",
+          measurementId: "G-FTY96151DE"
         };
 
-        window.logout = async function() {
-            try {
-                await signOut(auth);
-                // Restore mandatory anonymous auth state for the platform
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Logout error:", error);
-            }
-        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-        function showLoginScreen() {
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('appScreen').classList.add('hidden');
-            
-            // Reset Google btn
-            const btn = document.getElementById('googleLoginBtn');
-            btn.disabled = false;
-            btn.innerHTML = `
-                <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Continue with Google
-            `;
-        }
+        let currentUser = null;
+        let allItems = [];
 
-        function showAppScreen(user) {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-            
-            // Populate profile data
-            document.getElementById('userName').textContent = user.displayName || 'User';
-            document.getElementById('userEmail').textContent = user.email || '';
-            
-            const avatar = document.getElementById('userAvatar');
-            if(user.photoURL) {
-                avatar.src = user.photoURL;
-                avatar.classList.remove('hidden');
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                loadData();
             } else {
-                avatar.classList.add('hidden');
+                currentUser = null;
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('hidden');
             }
-        }
+        });
 
-        function setupRealtimeListener() {
-            if (!currentUserUid) return;
-            
-            document.getElementById('loadingIndicator').classList.remove('hidden');
-            document.getElementById('phoneGrid').classList.add('hidden');
-            document.getElementById('emptyState').classList.add('hidden');
-
-            // STRICT PATH: Only fetch data for the logged-in user
-            collectionRef = collection(db, 'artifacts', appId, 'users', currentUserUid, 'phoneDetails');
-            const q = query(collectionRef); // Simple query, no complex indexing
-
-            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-                phonesData = [];
-                snapshot.forEach((doc) => {
-                    phonesData.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // In-memory sort (newest first)
-                phonesData.sort((a, b) => b.createdAt - a.createdAt);
-
-                document.getElementById('loadingIndicator').classList.add('hidden');
-                renderPhones();
-            }, (error) => {
-                console.error("Firestore Error:", error);
-                showGlobalError("Failed to sync your data. Make sure you have a stable connection.");
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch((error) => {
+                const errEl = document.getElementById('loginError');
+                errEl.innerText = "Sign in failed. Please try again.";
+                errEl.classList.remove('hidden');
             });
         }
 
-        function renderPhones() {
-            const grid = document.getElementById('phoneGrid');
-            const emptyState = document.getElementById('emptyState');
-            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            grid.innerHTML = '';
-            
-            const filteredPhones = phonesData.filter(phone => {
-                if(!phone.snCode) return false;
-                return phone.snCode.toLowerCase().includes(searchVal);
-            });
-
-            if (filteredPhones.length === 0) {
-                grid.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                
-                const emptyTitle = emptyState.querySelector('h3');
-                const emptyDesc = emptyState.querySelector('p');
-                if(searchVal && phonesData.length > 0) {
-                    emptyTitle.textContent = "No matches found";
-                    emptyDesc.textContent = `No SN Codes matching "${searchVal}"`;
-                } else {
-                    emptyTitle.textContent = "No SN Codes found";
-                    emptyDesc.textContent = "Click the '+ Add SN' button to register a new device.";
-                }
-            } else {
-                emptyState.classList.add('hidden');
-                grid.classList.remove('hidden');
-
-                filteredPhones.forEach(phone => {
-                    const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-red-200 transition-all duration-200 cursor-pointer group flex items-center justify-between";
-                    card.onclick = () => window.openDetailModal(phone.id);
-                    
-                    card.innerHTML = `
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors">
-                                <i class="fa-solid fa-barcode text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">SN Code</p>
-                                <p class="text-lg font-bold text-gray-800">${escapeHtml(phone.snCode)}</p>
-                            </div>
-                        </div>
-                        <div class="text-gray-300 group-hover:text-red-500 transition-colors">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-            }
+        function logout() {
+            auth.signOut();
         }
 
-        document.getElementById('searchInput').addEventListener('input', renderPhones);
-
-        window.saveDevice = async function() {
-            const snCode = document.getElementById('snCode').value.trim();
-            const phoneModel = document.getElementById('phoneModel').value.trim();
-            const errorDiscuss = document.getElementById('errorDiscuss').value.trim();
-            const boughtPrice = document.getElementById('boughtPrice').value;
-            const sellPrice = document.getElementById('sellPrice').value;
-            const errDiv = document.getElementById('formError');
-            
-            if (!snCode || !phoneModel || !errorDiscuss || !boughtPrice || !sellPrice) {
-                errDiv.textContent = "Please fill in all fields.";
-                errDiv.classList.remove('hidden');
-                return;
-            }
-            
-            if (!currentUserUid || !collectionRef) {
-                errDiv.textContent = "Authentication Error: Please sign in again.";
-                errDiv.classList.remove('hidden');
-                return;
-            }
-
-            const btn = document.getElementById('saveBtn');
-            const spinner = document.getElementById('saveSpinner');
-            
-            btn.disabled = true;
-            spinner.classList.remove('hidden');
-            errDiv.classList.add('hidden');
-
-            try {
-                await addDoc(collectionRef, {
-                    snCode: snCode,
-                    phoneModel: phoneModel,
-                    errorDiscuss: errorDiscuss,
-                    boughtPrice: parseFloat(boughtPrice),
-                    sellPrice: parseFloat(sellPrice),
-                    createdAt: Date.now()
-                });
-                
-                document.getElementById('addForm').reset();
-                window.closeAddModal();
-            } catch (error) {
-                console.error("Save error:", error);
-                errDiv.textContent = "Failed to save data. " + error.message;
-                errDiv.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                spinner.classList.add('hidden');
-            }
-        };
-
-        window.removeDevice = async function() {
-            const snCodeInput = document.getElementById('removeSnCode').value.trim();
-            const errDiv = document.getElementById('removeFormError');
-            const successDiv = document.getElementById('removeFormSuccess');
-            const btn = document.getElementById('confirmRemoveBtn');
-            const spinner = document.getElementById('removeSpinner');
-
-            if (!snCodeInput) {
-                errDiv.textContent = "Please enter an SN Code.";
-                errDiv.classList.remove('hidden');
-                successDiv.classList.add('hidden');
-                return;
-            }
-
-            const device = phonesData.find(p => p.snCode.toLowerCase() === snCodeInput.toLowerCase());
-            
-            if (!device) {
-                errDiv.textContent = "SN Code not found in your list.";
-                errDiv.classList.remove('hidden');
-                successDiv.classList.add('hidden');
-                return;
-            }
-
-            btn.disabled = true;
-            spinner.classList.remove('hidden');
-            errDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUserUid, 'phoneDetails', device.id);
-                await deleteDoc(docRef);
-                
-                successDiv.textContent = "Device removed successfully!";
-                successDiv.classList.remove('hidden');
-                
-                setTimeout(() => closeRemoveModal(), 1200);
-            } catch (error) {
-                console.error("Delete error:", error);
-                errDiv.textContent = "Failed to remove device.";
-                errDiv.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                spinner.classList.add('hidden');
-            }
-        };
-
-        function escapeHtml(unsafe) {
-            if (!unsafe) return '';
-            return unsafe.toString()
-                 .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        window.openAddModal = function() {
-            document.getElementById('formError').classList.add('hidden');
-            document.getElementById('addModalBackdrop').classList.add('active');
-            document.getElementById('addModal').classList.add('active');
-            setTimeout(() => document.getElementById('snCode').focus(), 100);
-        }
-
-        window.closeAddModal = function() {
-            document.getElementById('addModalBackdrop').classList.remove('active');
-            document.getElementById('addModal').classList.remove('active');
+        function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+        function closeAddModal() { 
+            document.getElementById('addModal').classList.add('hidden'); 
             document.getElementById('addForm').reset();
         }
 
-        window.openDetailModal = function(id) {
-            const phone = phonesData.find(p => p.id === id);
-            if (!phone) return;
+        function openRemoveModal() { document.getElementById('removeModal').classList.remove('hidden'); }
+        function closeRemoveModal() { 
+            document.getElementById('removeModal').classList.add('hidden'); 
+            document.getElementById('removeSnInput').value = '';
+        }
 
-            document.getElementById('detailSnCode').textContent = escapeHtml(phone.snCode);
-            document.getElementById('detailModel').textContent = escapeHtml(phone.phoneModel);
-            document.getElementById('detailError').textContent = escapeHtml(phone.errorDiscuss);
+        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
+
+        async function saveSN(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const snCode = document.getElementById('snCodeInput').value.trim();
+            const phoneModel = document.getElementById('phoneModelInput').value.trim();
+            const errorDiscuss = document.getElementById('errorDiscussInput').value.trim();
+            const boughtPrice = document.getElementById('boughtPriceInput').value.trim();
+            const sellPrice = document.getElementById('sellPriceInput').value.trim();
+
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('snCodes').doc(snCode).set({
+                    snCode,
+                    phoneModel,
+                    errorDiscuss,
+                    boughtPrice,
+                    sellPrice,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                closeAddModal();
+                loadData();
+            } catch (err) {
+                alert("Error saving data: " + err.message);
+            }
+        }
+
+        async function removeSN(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+            const snCode = document.getElementById('removeSnInput').value.trim();
+
+            try {
+                const docRef = db.collection('users').doc(currentUser.uid).collection('snCodes').doc(snCode);
+                const doc = await docRef.get();
+                if (!doc.exists) {
+                    alert("This SN Code does not exist!");
+                    return;
+                }
+                await docRef.delete();
+                closeRemoveModal();
+                loadData();
+                alert("Successfully removed!");
+            } catch (err) {
+                alert("Error removing data: " + err.message);
+            }
+        }
+
+        async function loadData() {
+            if (!currentUser) return;
+            try {
+                const snapshot = await db.collection('users').doc(currentUser.uid).collection('snCodes').orderBy('createdAt', 'desc').get();
+                allItems = [];
+                snapshot.forEach(doc => {
+                    allItems.push(doc.data());
+                });
+                renderGrid(allItems);
+            } catch (err) {
+                console.error("Error loading data:", err);
+            }
+        }
+
+        function renderGrid(items) {
+            const grid = document.getElementById('snGrid');
+            const emptyState = document.getElementById('emptyState');
+            const totalCount = document.getElementById('totalCount');
             
-            const bp = parseFloat(phone.boughtPrice);
-            const sp = parseFloat(phone.sellPrice);
-            document.getElementById('detailBought').textContent = isNaN(bp) ? '0.00' : bp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('detailSell').textContent = isNaN(sp) ? '0.00' : sp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            grid.innerHTML = '';
+            totalCount.innerText = `${items.length} items`;
 
-            document.getElementById('detailModalBackdrop').classList.add('active');
-            document.getElementById('detailModal').classList.add('active');
+            if (items.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 hover:border-primary p-4 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer text-center flex flex-col items-center justify-center aspect-square";
+                card.onclick = () => showDetail(item);
+                card.innerHTML = `
+                    <span class="text-xs text-gray-400 font-semibold uppercase mb-1">SN Code</span>
+                    <span class="text-sm font-bold text-gray-800 break-all">${item.snCode}</span>
+                `;
+                grid.appendChild(card);
+            });
         }
 
-        window.closeDetailModal = function() {
-            document.getElementById('detailModalBackdrop').classList.remove('active');
-            document.getElementById('detailModal').classList.remove('active');
+        function filterSN() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allItems.filter(item => item.snCode.toLowerCase().includes(query));
+            renderGrid(filtered);
         }
 
-        window.openRemoveModal = function() {
-            document.getElementById('removeFormError').classList.add('hidden');
-            document.getElementById('removeFormSuccess').classList.add('hidden');
-            document.getElementById('removeSnCode').value = '';
-            document.getElementById('removeModalBackdrop').classList.add('active');
-            document.getElementById('removeModal').classList.add('active');
-            setTimeout(() => document.getElementById('removeSnCode').focus(), 100);
+        function showDetail(item) {
+            document.getElementById('detailSnTitle').innerText = "SN: " + item.snCode;
+            document.getElementById('detailModel').innerText = item.phoneModel;
+            document.getElementById('detailError').innerText = item.errorDiscuss;
+            document.getElementById('detailBought').innerText = item.boughtPrice;
+            document.getElementById('detailSell').innerText = item.sellPrice;
+            document.getElementById('detailModal').classList.remove('hidden');
         }
-
-        window.closeRemoveModal = function() {
-            document.getElementById('removeModalBackdrop').classList.remove('active');
-            document.getElementById('removeModal').classList.remove('active');
-        }
-
-        function showGlobalError(msg) {
-            const list = document.getElementById('phoneGrid');
-            list.innerHTML = `<div class="col-span-full bg-red-50 text-red-600 p-4 rounded-lg border border-red-200 text-center">${msg}</div>`;
-            list.classList.remove('hidden');
-        }
-
-        document.getElementById('addModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeAddModal(); });
-        document.getElementById('detailModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeDetailModal(); });
-        document.getElementById('removeModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeRemoveModal(); });
-
-        initApp();
     </script>
 </body>
 </html>
-```

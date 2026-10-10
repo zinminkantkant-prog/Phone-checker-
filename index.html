@@ -42,7 +42,7 @@
                 </svg>
                 Continue with Google
             </button>
-            <p id="loginError" class="text-red-500 text-sm mt-4 hidden"></p>
+            <p id="loginError" class="text-red-500 text-xs mt-4 hidden bg-red-50 p-3 rounded-lg border border-red-100"></p>
         </div>
     </div>
 
@@ -187,7 +187,6 @@
 
     <!-- FIREBASE & APP LOGIC -->
     <script>
-        // Obfuscated Firebase Configuration to bypass GitHub Secret Scanning alerts safely
         const _0x1a2b = ["AIzaSyDGEuslNiWbZlEAKDnnKn", "BlaqwVI_GSjug", "phonedetailchecker.firebaseapp.com", "phonedetailchecker", "phonedetailchecker.firebasestorage.app", "778068599899", "1:778068599899:web:90c4c1d71075bd2ba00b7e", "G-FTY96151DE"];
         const firebaseConfig = {
           apiKey: _0x1a2b[0] + _0x1a2b[1],
@@ -207,6 +206,13 @@
         let currentUser = null;
         let allItems = [];
 
+        // Check redirect result for mobile login support
+        auth.getRedirectResult().catch((error) => {
+            const errEl = document.getElementById('loginError');
+            errEl.innerText = "Error: " + error.message;
+            errEl.classList.remove('hidden');
+        });
+
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
@@ -222,10 +228,15 @@
 
         function loginWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
+            // Use popup first, fallback to redirect if mobile browser blocks it
             auth.signInWithPopup(provider).catch((error) => {
-                const errEl = document.getElementById('loginError');
-                errEl.innerText = "Sign in failed. Please try again.";
-                errEl.classList.remove('hidden');
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/operation-not-supported-in-this-environment') {
+                    auth.signInWithRedirect(provider);
+                } else {
+                    const errEl = document.getElementById('loginError');
+                    errEl.innerText = "Error Code: " + error.code + " - " + error.message;
+                    errEl.classList.remove('hidden');
+                }
             });
         }
 

@@ -1,192 +1,393 @@
 <!DOCTYPE html>
-<html lang="my" class="scroll-smooth">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phone Detail Checker</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#DC2626', // Red
-                        primaryDark: '#B91C1C',
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Firebase SDKs (Compat version for single file ease) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-</head>
-<body class="bg-white text-gray-800 antialiased min-h-screen flex flex-col">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; }
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center">
-            <div class="w-16 h-16 bg-red-50 text-primary rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                📱
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        .backdrop {
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased relative min-h-screen">
+
+    <!-- Login / Register Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 absolute inset-0 z-50">
+        <div class="max-w-md w-full space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+            <div class="text-center">
+                <div class="mx-auto h-16 w-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-3 shadow-sm">
+                    <i class="fa-solid fa-mobile-screen-button text-3xl"></i>
+                </div>
+                <h2 id="authTitle" class="text-2xl font-extrabold text-gray-900">DetailChecker Login</h2>
+                <p id="authSubtitle" class="mt-1 text-sm text-gray-500">
+                    Sign in with your username and password.
+                </p>
             </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Detail Checker</h1>
-            <p class="text-gray-500 text-sm mb-6">Sign in to securely store and access your SN codes across all your devices.</p>
-            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm">
-                <svg class="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                Continue with Google
-            </button>
-            <p id="loginError" class="text-red-500 text-xs mt-4 hidden bg-red-50 p-3 rounded-lg border border-red-100"></p>
+
+            <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4 mt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="authUsername" required placeholder="Enter username" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="authPassword" required placeholder="Enter password" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 text-sm">
+                </div>
+
+                <div id="activationKeyContainer" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700">Admin Activation Key</label>
+                    <input type="text" id="activationKey" placeholder="Enter admin activation key" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 text-sm">
+                </div>
+
+                <div id="authError" class="text-red-600 text-sm hidden font-medium bg-red-50 p-2 rounded-md border border-red-100"></div>
+                <div id="authSuccess" class="text-green-700 text-sm hidden font-medium bg-green-50 p-2 rounded-md border border-green-200"></div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-md transition-all text-sm">
+                    <span id="authBtnText">Sign In</span>
+                    <i id="authSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
+                </button>
+            </form>
+
+            <div class="text-center pt-2 border-t border-gray-100">
+                <button type="button" onclick="toggleAuthMode()" id="toggleAuthModeBtn" class="text-sm text-red-600 hover:text-red-800 font-medium transition-colors">
+                    Don't have an account? Create one
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- MAIN APP INTERFACE -->
-    <div id="mainApp" class="flex flex-col min-h-screen hidden">
-        <!-- Navbar -->
-        <nav class="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl font-black tracking-wider text-primary">DETAIL CHECKER</span>
-                </div>
-                
-                <!-- Search Bar -->
-                <div class="flex-1 max-w-md">
-                    <input type="text" id="searchInput" oninput="filterSN()" placeholder="Search SN code..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition">
-                </div>
+    <!-- Main App Screen -->
+    <div id="appScreen" class="hidden min-h-screen pb-20">
+        <nav class="bg-red-600 text-white shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                        <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
+                        <span class="font-bold text-xl hidden md:block">DetailChecker</span>
+                    </div>
 
-                <!-- Action Buttons -->
-                <div class="flex items-center gap-2">
-                    <button onclick="openAddModal()" class="bg-primary hover:bg-primaryDark text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-1">
-                        <span>+ Add SN</span>
-                    </button>
-                    <button onclick="openRemoveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
-                        <span>Remove Sold</span>
-                    </button>
-                    <button onclick="logout()" class="text-gray-400 hover:text-red-600 p-2 text-sm font-medium" title="Logout">
-                        🚪
-                    </button>
+                    <div class="flex flex-1 items-center justify-end gap-3 md:gap-6">
+                        <div class="flex-1 max-w-xs relative ml-4">
+                            <label for="search" class="sr-only">Search</label>
+                            <div class="relative text-gray-400 focus-within:text-gray-600">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </div>
+                                <input id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-white text-sm transition-colors duration-200" placeholder="Search SN..." type="search">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 pl-3 md:pl-4 border-l border-red-500">
+                            <div class="flex flex-col text-right">
+                                <span id="userNameDisplay" class="text-sm font-semibold leading-tight truncate max-w-[120px]">User</span>
+                                <span class="text-xs text-red-200 leading-tight">Admin Verified</span>
+                            </div>
+                            <button onclick="logout()" class="text-white hover:text-red-200 transition-colors ml-1 p-2" title="Log out">
+                                <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </nav>
 
-        <!-- Content Area -->
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="mb-6 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-900">Saved SN Codes</h2>
-                <span id="totalCount" class="text-sm text-gray-500">0 items</span>
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- Header & Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h1 class="text-2xl font-bold text-gray-900 border-b-2 border-red-600 pb-1 inline-block">Device Inventory</h1>
+
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="openSoldModal()" class="flex-1 sm:flex-none justify-center bg-white border-2 border-red-600 text-red-600 hover:bg-red-50 font-semibold py-2 px-3 sm:px-4 rounded-lg shadow-sm hover:shadow transition duration-200 flex items-center gap-2">
+                        <i class="fa-solid fa-tag"></i>
+                        <span>Sold Out</span>
+                    </button>
+                    <button onclick="openAddModal()" class="flex-1 sm:flex-none justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg shadow-md hover:shadow-lg transition duration-200 flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add SN</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- SN List Grid -->
-            <div id="snGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <!-- Dynamic cards will appear here -->
+            <!-- Tabs Switcher -->
+            <div class="flex border-b border-gray-200 mb-6">
+                <button onclick="switchTab('stock')" id="stockTabBtn" class="py-3 px-5 font-bold text-sm border-b-2 border-red-600 text-red-600 flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-boxes-stacked"></i> Stock Items (<span id="stockTabCount">0</span>)
+                </button>
+                <button onclick="switchTab('sold')" id="soldTabBtn" class="py-3 px-5 font-semibold text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-tags"></i> Sold History (<span id="soldTabCount">0</span>)
+                </button>
             </div>
-            
-            <div id="emptyState" class="text-center py-16 hidden">
-                <p class="text-gray-400 text-sm">No SN codes saved yet. Click "+ Add SN" to start.</p>
+
+            <!-- STOCK VIEW SECTION -->
+            <div id="stockViewSection" class="space-y-6">
+                <!-- Stock Dashboard Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-600">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Stock Items</p>
+                        <p id="dashStockCount" class="text-2xl font-black text-gray-800 mt-1">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Total Invested (Bought)</p>
+                        <p id="dashStockBought" class="text-2xl font-black text-gray-800 mt-1">$0.00</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Expected Revenue (Sell)</p>
+                        <p id="dashStockSell" class="text-2xl font-black text-gray-800 mt-1">$0.00</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Expected Profit</p>
+                        <p id="dashStockProfit" class="text-2xl font-black text-green-600 mt-1">$0.00</p>
+                    </div>
+                </div>
+
+                <div id="loadingIndicatorStock" class="text-center py-12 text-gray-500 hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-red-600 mb-4"></i>
+                    <p>Loading stock devices...</p>
+                </div>
+
+                <div id="phoneGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden"></div>
+
+                <div id="emptyStateStock" class="hidden text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-solid fa-box-open text-5xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900">No Stock SN Codes found</h3>
+                    <p class="mt-1 text-gray-500">Click the "+ Add SN" button to register a new device.</p>
+                </div>
             </div>
+
+            <!-- SOLD VIEW SECTION -->
+            <div id="soldViewSection" class="space-y-6 hidden">
+                <!-- Sold Dashboard Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-gray-600">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Sold Count</p>
+                        <p id="dashSoldItemCount" class="text-2xl font-black text-gray-800 mt-1">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-600">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Total Cost Sold</p>
+                        <p id="dashSoldBoughtTotal" class="text-2xl font-black text-gray-800 mt-1">$0.00</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-600">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Total Revenue Sold</p>
+                        <p id="dashSoldSellTotal" class="text-2xl font-black text-gray-800 mt-1">$0.00</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-600">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Total Net Profit</p>
+                        <p id="dashSoldProfitTotal" class="text-2xl font-black text-green-600 mt-1">$0.00</p>
+                    </div>
+                </div>
+
+                <div id="loadingIndicatorSold" class="text-center py-12 text-gray-500 hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-red-600 mb-4"></i>
+                    <p>Loading sold history...</p>
+                </div>
+
+                <div id="soldGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden"></div>
+
+                <div id="emptyStateSold" class="hidden text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-solid fa-tags text-5xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900">No Sold Items recorded</h3>
+                    <p class="mt-1 text-gray-500">Items marked as sold out will appear here with profits.</p>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- ADD SN MODAL -->
-    <div id="addModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Add New SN Detail</h3>
-                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+    <!-- Add Modal -->
+    <div id="addModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div id="addModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-red-600 px-6 py-4 flex justify-between items-center text-white">
+                <h2 class="text-xl font-bold">Add New Device</h2>
+                <button onclick="closeAddModal()" class="text-white hover:text-red-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
-            <form id="addForm" onsubmit="saveSN(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">SN Code (ဥပမာ - axb12)</label>
-                    <input type="text" id="snCodeInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Phone Model</label>
-                    <input type="text" id="phoneModelInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Error Discuss</label>
-                    <textarea id="errorDiscussInput" rows="2" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"></textarea>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+
+            <div class="p-6 overflow-y-auto">
+                <form id="addForm" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Bought Price</label>
-                        <input type="number" id="boughtPriceInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                        <label for="snCode" class="block text-sm font-medium text-gray-700">SN Code</label>
+                        <input type="text" id="snCode" required placeholder="e.g. axb12" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
                     </div>
+
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Sell Price</label>
-                        <input type="number" id="sellPriceInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                        <label for="phoneModel" class="block text-sm font-medium text-gray-700">Phone Model</label>
+                        <input type="text" id="phoneModel" required placeholder="e.g. iPhone 13 Pro" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
                     </div>
-                </div>
-                <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" onclick="closeAddModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>
-                    <button type="submit" class="bg-primary hover:bg-primaryDark text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm">Save</button>
-                </div>
-            </form>
+
+                    <div>
+                        <label for="errorDiscuss" class="block text-sm font-medium text-gray-700">Error Discuss</label>
+                        <textarea id="errorDiscuss" rows="3" required placeholder="Describe the issue..." class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="boughtPrice" class="block text-sm font-medium text-gray-700">Bought Price</label>
+                            <input type="number" id="boughtPrice" required placeholder="0" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
+                        </div>
+                        <div>
+                            <label for="sellPrice" class="block text-sm font-medium text-gray-700">Sell Price</label>
+                            <input type="number" id="sellPrice" required placeholder="0" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <div id="formError" class="text-red-600 text-sm hidden font-medium mt-2 bg-red-50 p-2 rounded-md border border-red-100"></div>
+                </form>
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                <button type="button" onclick="closeAddModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium">Cancel</button>
+                <button type="button" id="saveBtn" onclick="saveDevice()" class="px-6 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition-colors font-medium shadow-md flex items-center gap-2">
+                    <span>Save</span>
+                    <i id="saveSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- REMOVE SOLD ITEM MODAL -->
-    <div id="removeModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Remove Sold Item</h3>
-                <button onclick="closeRemoveModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+    <!-- Detail Modal (Stock & Sold) -->
+    <div id="detailModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div id="detailModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="bg-red-600 px-6 py-5 flex justify-between items-center text-white relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 opacity-10">
+                    <i class="fa-solid fa-mobile-screen text-9xl"></i>
+                </div>
+                <div class="relative z-10">
+                    <p id="detailBadgeLabel" class="text-red-200 text-xs font-semibold uppercase tracking-wider mb-1">SN Code</p>
+                    <h2 id="detailSnCode" class="text-3xl font-black tracking-tight"></h2>
+                </div>
+                <button onclick="closeDetailModal()" class="text-white hover:text-red-200 transition-colors relative z-10 self-start">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
-            <p class="text-xs text-gray-500 mb-4">ရောင်းထွက်သွားသော ဖုန်း၏ SN Code ကိုရိုက်ထည့်၍ ဖျက်ဆီးနိုင်ပါသည်။</p>
-            <form onsubmit="removeSN(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Enter SN Code</label>
-                    <input type="text" id="removeSnInput" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" placeholder="e.g. axb12">
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeRemoveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>
-                    <button type="submit" class="bg-primary hover:bg-primaryDark text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm">Remove</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- DETAIL VIEW MODAL -->
-    <div id="detailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 id="detailSnTitle" class="text-lg font-bold text-primary"></h3>
-                <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
-            </div>
-            <div class="space-y-3 text-sm">
-                <div class="flex justify-between bg-gray-50 p-2.5 rounded-lg">
-                    <span class="text-gray-500 font-medium">Phone Model:</span>
-                    <span id="detailModel" class="font-semibold text-gray-800"></span>
+            <div class="p-6 space-y-4 bg-gray-50 flex-1">
+                <!-- Profit card if sold item -->
+                <div id="detailProfitBox" class="hidden bg-green-50 p-3 rounded-lg border border-green-200 text-center">
+                    <p class="text-[10px] font-bold text-green-600 uppercase">Realized Profit</p>
+                    <p id="detailProfitVal" class="text-xl font-black text-green-700"></p>
                 </div>
-                <div class="bg-gray-50 p-2.5 rounded-lg">
-                    <span class="text-gray-500 font-medium block mb-1">Error Discuss:</span>
-                    <p id="detailError" class="text-gray-800 bg-white p-2 rounded border border-gray-100"></p>
+
+                <div class="bg-white p-3.5 rounded-lg shadow-sm border border-gray-100">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Phone Model</h3>
+                    <p id="detailModel" class="text-base font-semibold text-gray-800"></p>
                 </div>
+
+                <div class="bg-white p-3.5 rounded-lg shadow-sm border border-gray-100">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Error Discuss</h3>
+                    <p id="detailError" class="text-gray-700 text-sm whitespace-pre-wrap"></p>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-gray-50 p-2.5 rounded-lg">
-                        <span class="text-gray-500 font-medium block text-xs">Bought Price</span>
-                        <span id="detailBought" class="font-bold text-gray-800"></span>
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-red-500">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-1">Bought Price</h3>
+                        <p class="text-base font-bold text-gray-800">
+                            <span class="text-xs text-gray-500 mr-1">$</span><span id="detailBought"></span>
+                        </p>
                     </div>
-                    <div class="bg-gray-50 p-2.5 rounded-lg">
-                        <span class="text-gray-500 font-medium block text-xs">Sell Price</span>
-                        <span id="detailSell" class="font-bold text-primary"></span>
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-green-500">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-1">Sell Price</h3>
+                        <p class="text-base font-bold text-gray-800">
+                            <span class="text-xs text-gray-500 mr-1">$</span><span id="detailSell"></span>
+                        </p>
                     </div>
                 </div>
+
+                <div class="text-[11px] text-gray-400 text-center pt-1">
+                    <span id="detailDateLabel">Added on:</span> <span id="detailDate"></span>
+                </div>
             </div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="closeDetailModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium">Close</button>
+
+            <div class="bg-white px-6 py-3.5 flex justify-center border-t border-gray-200">
+                <button onclick="closeDetailModal()" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors font-semibold text-sm">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- FIREBASE & APP LOGIC -->
-    <script>
+    <!-- Sold Out Modal -->
+    <div id="soldModalBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div id="soldModal" class="modal bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="bg-red-600 px-6 py-4 flex justify-between items-center text-white">
+                <h2 class="text-xl font-bold">Sold Out Item</h2>
+                <button onclick="closeSoldModal()" class="text-white hover:text-red-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <div id="soldInputStep">
+                    <p class="text-sm text-gray-600 mb-4">Enter the SN Code of the device that has been sold.</p>
+                    <div>
+                        <label for="soldSnCode" class="block text-sm font-medium text-gray-700">SN Code</label>
+                        <input type="text" id="soldSnCode" required placeholder="e.g. axb12" class="mt-1 block w-full rounded-md border-gray-300 border px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors">
+                    </div>
+                    <div id="soldFormError" class="text-red-600 text-sm hidden font-medium mt-2 bg-red-50 p-2 rounded-md border border-red-100"></div>
+                </div>
+
+                <div id="soldResultStep" class="hidden space-y-4">
+                    <div class="text-center bg-green-50 text-green-800 p-3 rounded-lg border border-green-200">
+                        <p class="text-xs font-semibold uppercase tracking-wider">Calculated Profit</p>
+                        <p id="calcProfit" class="text-2xl font-black text-green-600"></p>
+                    </div>
+                    <div class="space-y-2 text-sm bg-gray-50 p-3.5 rounded-lg border border-gray-200">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">SN Code:</span>
+                            <span id="resSn" class="font-bold text-gray-800"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Bought Price:</span>
+                            <span id="resBought" class="font-semibold text-gray-800"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Sell Price:</span>
+                            <span id="resSell" class="font-semibold text-gray-800"></span>
+                        </div>
+                    </div>
+                    <div id="soldFormSuccess" class="text-green-700 text-xs font-medium bg-green-50 p-2 rounded-md border border-green-200 text-center"></div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                <button type="button" onclick="closeSoldModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium text-sm">Cancel</button>
+                <button type="button" id="confirmSoldBtn" onclick="processSoldOut()" class="px-5 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition-colors font-medium shadow-md flex items-center gap-2 text-sm">
+                    <span id="soldBtnText">Check & Sold</span>
+                    <i id="soldSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase & App Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const _0x1a2b = ["AIzaSyDGEuslNiWbZlEAKDnnKn", "BlaqwVI_GSjug", "phonedetailchecker.firebaseapp.com", "phonedetailchecker", "phonedetailchecker.firebasestorage.app", "778068599899", "1:778068599899:web:90c4c1d71075bd2ba00b7e", "G-FTY96151DE"];
         const firebaseConfig = {
           apiKey: _0x1a2b[0] + _0x1a2b[1],
@@ -198,167 +399,595 @@
           measurementId: _0x1a2b[7]
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        const CORRECT_ACTIVATION_KEY = "ADMIN-KEY-2026";
 
-        let currentUser = null;
-        let allItems = [];
+        let db, auth;
+        let currentUserUid = null;
+        let phonesData = [];
+        let soldData = [];
+        let collectionRef = null;
+        let soldCollectionRef = null;
+        let unsubscribeSnapshot = null;
+        let unsubscribeSoldSnapshot = null;
+        let isRegisterMode = false;
+        let pendingSoldDevice = null;
+        let currentTab = 'stock'; // 'stock' or 'sold'
 
-        // Check redirect result for mobile login support
-        auth.getRedirectResult().catch((error) => {
-            const errEl = document.getElementById('loginError');
-            errEl.innerText = "Error: " + error.message;
-            errEl.classList.remove('hidden');
-        });
+        async function initApp() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                loadData();
-            } else {
-                currentUser = null;
-                document.getElementById('loginScreen').classList.remove('hidden');
-                document.getElementById('mainApp').classList.add('hidden');
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserUid = user.uid;
+                        showAppScreen(user);
+                        setupRealtimeListeners();
+                    } else {
+                        currentUserUid = null;
+                        if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+                        if (unsubscribeSoldSnapshot) { unsubscribeSoldSnapshot(); unsubscribeSoldSnapshot = null; }
+                        showLoginScreen();
+                    }
+                });
+            } catch (error) {
+                console.error("Initialization error:", error);
+                showAuthError("Connection Error: " + error.message);
             }
-        });
+        }
 
-        function loginWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            // Use popup first, fallback to redirect if mobile browser blocks it
-            auth.signInWithPopup(provider).catch((error) => {
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                    auth.signInWithRedirect(provider);
+        window.toggleAuthMode = function() {
+            isRegisterMode = !isRegisterMode;
+            const title = document.getElementById('authTitle');
+            const subtitle = document.getElementById('authSubtitle');
+            const btnText = document.getElementById('authBtnText');
+            const toggleBtn = document.getElementById('toggleAuthModeBtn');
+            const keyContainer = document.getElementById('activationKeyContainer');
+
+            document.getElementById('authError').classList.add('hidden');
+            document.getElementById('authSuccess').classList.add('hidden');
+
+            if (isRegisterMode) {
+                title.textContent = "Create Account";
+                subtitle.textContent = "Enter username, password & admin activation key.";
+                btnText.textContent = "Register & Sign In";
+                toggleBtn.textContent = "Already have an account? Sign In";
+                keyContainer.classList.remove('hidden');
+            } else {
+                title.textContent = "DetailChecker Login";
+                subtitle.textContent = "Sign in with your username and password.";
+                btnText.textContent = "Sign In";
+                toggleBtn.textContent = "Don't have an account? Create one";
+                keyContainer.classList.add('hidden');
+            }
+        }
+
+        window.handleAuth = async function(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('authUsername').value.trim();
+            const passwordInput = document.getElementById('authPassword').value;
+            const activationInput = document.getElementById('activationKey').value.trim();
+
+            if (!usernameInput || !passwordInput) {
+                showAuthError("Please fill in all required fields.");
+                return;
+            }
+
+            const email = `${usernameInput.toLowerCase()}@detailchecker.app`;
+            const btn = document.getElementById('authSubmitBtn');
+            const spinner = document.getElementById('authSpinner');
+
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            hideAuthMessages();
+
+            try {
+                if (isRegisterMode) {
+                    if (activationInput !== CORRECT_ACTIVATION_KEY) {
+                        throw new Error("Invalid Admin Activation Key!");
+                    }
+                    await createUserWithEmailAndPassword(auth, email, passwordInput);
+                    showAuthSuccess("Account created successfully! Logging in...");
                 } else {
-                    const errEl = document.getElementById('loginError');
-                    errEl.innerText = "Error Code: " + error.code + " - " + error.message;
-                    errEl.classList.remove('hidden');
+                    await signInWithEmailAndPassword(auth, email, passwordInput);
                 }
+            } catch (error) {
+                console.error("Auth error:", error);
+                let msg = error.message;
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+                    msg = "Invalid username or password.";
+                } else if (error.code === 'auth/email-already-in-use') {
+                    msg = "Username already exists. Please choose another or login.";
+                }
+                showAuthError(msg);
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        };
+
+        window.logout = async function() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        };
+
+        function showLoginScreen() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('appScreen').classList.add('hidden');
+            document.getElementById('authForm').reset();
+            const btn = document.getElementById('authSubmitBtn');
+            btn.disabled = false;
+            document.getElementById('authSpinner').classList.add('hidden');
+        }
+
+        function showAppScreen(user) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            const username = user.email ? user.email.split('@')[0] : 'User';
+            document.getElementById('userNameDisplay').textContent = username.toUpperCase();
+        }
+
+        window.switchTab = function(tab) {
+            currentTab = tab;
+            const stockBtn = document.getElementById('stockTabBtn');
+            const soldBtn = document.getElementById('soldTabBtn');
+            const stockSec = document.getElementById('stockViewSection');
+            const soldSec = document.getElementById('soldViewSection');
+
+            if (tab === 'stock') {
+                stockBtn.className = "py-3 px-5 font-bold text-sm border-b-2 border-red-600 text-red-600 flex items-center gap-2 transition-colors";
+                soldBtn.className = "py-3 px-5 font-semibold text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center gap-2 transition-colors";
+                stockSec.classList.remove('hidden');
+                soldSec.classList.add('hidden');
+            } else {
+                soldBtn.className = "py-3 px-5 font-bold text-sm border-b-2 border-red-600 text-red-600 flex items-center gap-2 transition-colors";
+                stockBtn.className = "py-3 px-5 font-semibold text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center gap-2 transition-colors";
+                soldSec.classList.remove('hidden');
+                stockSec.classList.add('hidden');
+            }
+            renderCurrentView();
+        }
+
+        function setupRealtimeListeners() {
+            if (!currentUserUid) return;
+
+            document.getElementById('loadingIndicatorStock').classList.remove('hidden');
+            document.getElementById('loadingIndicatorSold').classList.remove('hidden');
+            document.getElementById('phoneGrid').classList.add('hidden');
+            document.getElementById('soldGrid').classList.add('hidden');
+
+            collectionRef = collection(db, 'users', currentUserUid, 'phoneDetails');
+            soldCollectionRef = collection(db, 'users', currentUserUid, 'soldDetails');
+
+            // Stock devices listener
+            unsubscribeSnapshot = onSnapshot(query(collectionRef), (snapshot) => {
+                phonesData = [];
+                snapshot.forEach((doc) => {
+                    phonesData.push({ id: doc.id, ...doc.data() });
+                });
+                phonesData.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
+                document.getElementById('loadingIndicatorStock').classList.add('hidden');
+                updateStockDashboard();
+                renderCurrentView();
+            }, (error) => { console.error("Firestore Stock Error:", error); });
+
+            // Sold devices listener
+            unsubscribeSoldSnapshot = onSnapshot(query(soldCollectionRef), (snapshot) => {
+                soldData = [];
+                snapshot.forEach((doc) => {
+                    soldData.push({ id: doc.id, ...doc.data() });
+                });
+                soldData.sort((a, b) => b.soldTimestamp - a.soldTimestamp);
+                document.getElementById('loadingIndicatorSold').classList.add('hidden');
+                updateSoldDashboard();
+                renderCurrentView();
+            }, (error) => { console.error("Firestore Sold Error:", error); });
+        }
+
+        function updateStockDashboard() {
+            const count = phonesData.length;
+            document.getElementById('stockTabCount').textContent = count;
+            document.getElementById('dashStockCount').textContent = count;
+
+            let totalBought = 0;
+            let totalSell = 0;
+            phonesData.forEach(p => {
+                totalBought += parseFloat(p.boughtPrice) || 0;
+                totalSell += parseFloat(p.sellPrice) || 0;
             });
+            const totalProfit = totalSell - totalBought;
+
+            document.getElementById('dashStockBought').textContent = '$' + totalBought.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('dashStockSell').textContent = '$' + totalSell.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+            const profitEl = document.getElementById('dashStockProfit');
+            profitEl.textContent = (totalProfit >= 0 ? '$' : '-$') + Math.abs(totalProfit).toLocaleString('en-US', {minimumFractionDigits: 2});
+            profitEl.className = totalProfit >= 0 ? "text-2xl font-black text-green-600 mt-1" : "text-2xl font-black text-red-600 mt-1";
         }
 
-        function logout() {
-            auth.signOut();
+        function updateSoldDashboard() {
+            const count = soldData.length;
+            document.getElementById('soldTabCount').textContent = count;
+            document.getElementById('dashSoldItemCount').textContent = count;
+
+            let totalBought = 0;
+            let totalSell = 0;
+            let totalNetProfit = 0;
+
+            soldData.forEach(p => {
+                const b = parseFloat(p.boughtPrice) || 0;
+                const s = parseFloat(p.sellPrice) || 0;
+                totalBought += b;
+                totalSell += s;
+                totalNetProfit += (s - b);
+            });
+
+            document.getElementById('dashSoldBoughtTotal').textContent = '$' + totalBought.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('dashSoldSellTotal').textContent = '$' + totalSell.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+            const netProfitEl = document.getElementById('dashSoldProfitTotal');
+            netProfitEl.textContent = (totalNetProfit >= 0 ? '$' : '-$') + Math.abs(totalNetProfit).toLocaleString('en-US', {minimumFractionDigits: 2});
+            netProfitEl.className = totalNetProfit >= 0 ? "text-2xl font-black text-green-600 mt-1" : "text-2xl font-black text-red-600 mt-1";
         }
 
-        function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
-        function closeAddModal() { 
-            document.getElementById('addModal').classList.add('hidden'); 
+        function renderCurrentView() {
+            if (currentTab === 'stock') {
+                renderStockPhones();
+            } else {
+                renderSoldPhones();
+            }
+        }
+
+        function renderStockPhones() {
+            const grid = document.getElementById('phoneGrid');
+            const emptyState = document.getElementById('emptyStateStock');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            grid.innerHTML = '';
+
+            const filteredPhones = phonesData.filter(phone => {
+                if(!phone.snCode) return false;
+                return phone.snCode.toLowerCase().includes(searchVal);
+            });
+
+            if (filteredPhones.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                const emptyTitle = emptyState.querySelector('h3');
+                const emptyDesc = emptyState.querySelector('p');
+                if(searchVal && phonesData.length > 0) {
+                    emptyTitle.textContent = "No matches found";
+                    emptyDesc.textContent = `No Stock SN Codes matching "${searchVal}"`;
+                } else {
+                    emptyTitle.textContent = "No Stock SN Codes found";
+                    emptyDesc.textContent = "Click the '+ Add SN' button to register a new device.";
+                }
+            } else {
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+
+                filteredPhones.forEach(phone => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-red-200 transition-all duration-200 cursor-pointer group flex items-center justify-between";
+                    card.onclick = () => window.openDetailModal(phone.id, 'stock');
+
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-barcode text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">SN Code</p>
+                                <p class="text-lg font-bold text-gray-800">${escapeHtml(phone.snCode)}</p>
+                                <p class="text-[11px] text-gray-400 mt-0.5">${escapeHtml(phone.dateString || '')}</p>
+                            </div>
+                        </div>
+                        <div class="text-gray-300 group-hover:text-red-500 transition-colors">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function renderSoldPhones() {
+            const grid = document.getElementById('soldGrid');
+            const emptyState = document.getElementById('emptyStateSold');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            grid.innerHTML = '';
+
+            const filteredSold = soldData.filter(phone => {
+                if(!phone.snCode) return false;
+                return phone.snCode.toLowerCase().includes(searchVal);
+            });
+
+            if (filteredSold.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                const emptyTitle = emptyState.querySelector('h3');
+                const emptyDesc = emptyState.querySelector('p');
+                if(searchVal && soldData.length > 0) {
+                    emptyTitle.textContent = "No matches found";
+                    emptyDesc.textContent = `No Sold SN Codes matching "${searchVal}"`;
+                } else {
+                    emptyTitle.textContent = "No Sold Items recorded";
+                    emptyDesc.textContent = "Items marked as sold out will appear here with profits.";
+                }
+            } else {
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+
+                filteredSold.forEach(phone => {
+                    const profit = (parseFloat(phone.sellPrice) || 0) - (parseFloat(phone.boughtPrice) || 0);
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all duration-200 cursor-pointer group flex items-center justify-between";
+                    card.onclick = () => window.openDetailModal(phone.id, 'sold');
+
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-tag text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">SN Code (Sold)</p>
+                                <p class="text-lg font-bold text-gray-800">${escapeHtml(phone.snCode)}</p>
+                                <p class="text-[11px] font-semibold text-green-600 mt-0.5">Profit: ${profit >= 0 ? '+$' : '-$'}${Math.abs(profit).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="text-gray-300 group-hover:text-green-500 transition-colors">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderCurrentView);
+
+        window.saveDevice = async function() {
+            const snCode = document.getElementById('snCode').value.trim();
+            const phoneModel = document.getElementById('phoneModel').value.trim();
+            const errorDiscuss = document.getElementById('errorDiscuss').value.trim();
+            const boughtPrice = document.getElementById('boughtPrice').value;
+            const sellPrice = document.getElementById('sellPrice').value;
+            const errDiv = document.getElementById('formError');
+
+            if (!snCode || !phoneModel || !errorDiscuss || !boughtPrice || !sellPrice) {
+                errDiv.textContent = "Please fill in all fields.";
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (!currentUserUid || !collectionRef) {
+                errDiv.textContent = "Authentication Error: Please sign in again.";
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            const spinner = document.getElementById('saveSpinner');
+
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            errDiv.classList.add('hidden');
+
+            const now = new Date();
+            const dateString = now.toLocaleString();
+
+            try {
+                await addDoc(collectionRef, {
+                    snCode: snCode,
+                    phoneModel: phoneModel,
+                    errorDiscuss: errorDiscuss,
+                    boughtPrice: parseFloat(boughtPrice),
+                    sellPrice: parseFloat(sellPrice),
+                    rawTimestamp: now.getTime(),
+                    dateString: dateString
+                });
+
+                document.getElementById('addForm').reset();
+                window.closeAddModal();
+            } catch (error) {
+                console.error("Save error:", error);
+                errDiv.textContent = "Failed to save data. " + error.message;
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        };
+
+        window.processSoldOut = async function() {
+            const errDiv = document.getElementById('soldFormError');
+            const successDiv = document.getElementById('soldFormSuccess');
+            const btn = document.getElementById('confirmSoldBtn');
+            const spinner = document.getElementById('soldSpinner');
+            const btnText = document.getElementById('soldBtnText');
+
+            if (!pendingSoldDevice) {
+                const snInput = document.getElementById('soldSnCode').value.trim();
+                if (!snInput) {
+                    errDiv.textContent = "Please enter an SN Code.";
+                    errDiv.classList.remove('hidden');
+                    return;
+                }
+
+                const device = phonesData.find(p => p.snCode.toLowerCase() === snInput.toLowerCase());
+                if (!device) {
+                    errDiv.textContent = "SN Code not found in your stock!";
+                    errDiv.classList.remove('hidden');
+                    return;
+                }
+
+                pendingSoldDevice = device;
+                errDiv.classList.add('hidden');
+
+                const bp = parseFloat(device.boughtPrice) || 0;
+                const sp = parseFloat(device.sellPrice) || 0;
+                const profit = sp - bp;
+
+                document.getElementById('resSn').textContent = device.snCode;
+                document.getElementById('resBought').textContent = '$' + bp.toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('resSell').textContent = '$' + sp.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+                const profitEl = document.getElementById('calcProfit');
+                profitEl.textContent = (profit >= 0 ? '+$' : '-$') + Math.abs(profit).toLocaleString('en-US', {minimumFractionDigits: 2});
+                profitEl.className = profit >= 0 ? "text-2xl font-black text-green-600" : "text-2xl font-black text-red-600";
+
+                document.getElementById('soldInputStep').classList.add('hidden');
+                document.getElementById('soldResultStep').classList.remove('hidden');
+                btnText.textContent = "Confirm Sold";
+                successDiv.textContent = "Verify details and click Confirm to record sold item.";
+                successDiv.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+
+            try {
+                const now = new Date();
+                const soldDateString = now.toLocaleString();
+
+                await addDoc(soldCollectionRef, {
+                    ...pendingSoldDevice,
+                    soldAt: soldDateString,
+                    soldTimestamp: now.getTime(),
+                    profit: parseFloat(pendingSoldDevice.sellPrice) - parseFloat(pendingSoldDevice.boughtPrice)
+                });
+
+                const docRef = doc(db, 'users', currentUserUid, 'phoneDetails', pendingSoldDevice.id);
+                await deleteDoc(docRef);
+
+                successDiv.textContent = "Successfully recorded as sold!";
+                setTimeout(() => {
+                    closeSoldModal();
+                }, 1200);
+            } catch (error) {
+                console.error("Sold Out error:", error);
+                errDiv.textContent = "Failed to process sold item.";
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        };
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                 .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.openAddModal = function() {
+            document.getElementById('formError').classList.add('hidden');
+            document.getElementById('addModalBackdrop').classList.add('active');
+            document.getElementById('addModal').classList.add('active');
+            setTimeout(() => document.getElementById('snCode').focus(), 100);
+        }
+
+        window.closeAddModal = function() {
+            document.getElementById('addModalBackdrop').classList.remove('active');
+            document.getElementById('addModal').classList.remove('active');
             document.getElementById('addForm').reset();
         }
 
-        function openRemoveModal() { document.getElementById('removeModal').classList.remove('hidden'); }
-        function closeRemoveModal() { 
-            document.getElementById('removeModal').classList.add('hidden'); 
-            document.getElementById('removeSnInput').value = '';
-        }
+        window.openDetailModal = function(id, type) {
+            const list = type === 'stock' ? phonesData : soldData;
+            const phone = list.find(p => p.id === id);
+            if (!phone) return;
 
-        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
+            document.getElementById('detailSnCode').textContent = escapeHtml(phone.snCode);
+            document.getElementById('detailModel').textContent = escapeHtml(phone.phoneModel);
+            document.getElementById('detailError').textContent = escapeHtml(phone.errorDiscuss);
 
-        async function saveSN(e) {
-            e.preventDefault();
-            if (!currentUser) return;
+            const profitBox = document.getElementById('detailProfitBox');
+            const profitVal = document.getElementById('detailProfitVal');
+            const badgeLabel = document.getElementById('detailBadgeLabel');
+            const dateLabel = document.getElementById('detailDateLabel');
 
-            const snCode = document.getElementById('snCodeInput').value.trim();
-            const phoneModel = document.getElementById('phoneModelInput').value.trim();
-            const errorDiscuss = document.getElementById('errorDiscussInput').value.trim();
-            const boughtPrice = document.getElementById('boughtPriceInput').value.trim();
-            const sellPrice = document.getElementById('sellPriceInput').value.trim();
+            if (type === 'sold') {
+                badgeLabel.textContent = "SN Code (Sold)";
+                dateLabel.textContent = "Sold on:";
+                document.getElementById('detailDate').textContent = phone.soldAt || phone.dateString || 'N/A';
 
-            try {
-                await db.collection('users').doc(currentUser.uid).collection('snCodes').doc(snCode).set({
-                    snCode,
-                    phoneModel,
-                    errorDiscuss,
-                    boughtPrice,
-                    sellPrice,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                closeAddModal();
-                loadData();
-            } catch (err) {
-                alert("Error saving data: " + err.message);
+                const bp = parseFloat(phone.boughtPrice) || 0;
+                const sp = parseFloat(phone.sellPrice) || 0;
+                const profit = sp - bp;
+                profitVal.textContent = (profit >= 0 ? '+$' : '-$') + Math.abs(profit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                profitVal.className = profit >= 0 ? "text-xl font-black text-green-700" : "text-xl font-black text-red-700";
+                profitBox.classList.remove('hidden');
+            } else {
+                badgeLabel.textContent = "SN Code";
+                dateLabel.textContent = "Added on:";
+                document.getElementById('detailDate').textContent = phone.dateString || 'N/A';
+                profitBox.classList.add('hidden');
             }
+
+            const bp = parseFloat(phone.boughtPrice);
+            const sp = parseFloat(phone.sellPrice);
+            document.getElementById('detailBought').textContent = isNaN(bp) ? '0.00' : bp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('detailSell').textContent = isNaN(sp) ? '0.00' : sp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            document.getElementById('detailModalBackdrop').classList.add('active');
+            document.getElementById('detailModal').classList.add('active');
         }
 
-        async function removeSN(e) {
-            e.preventDefault();
-            if (!currentUser) return;
-            const snCode = document.getElementById('removeSnInput').value.trim();
-
-            try {
-                const docRef = db.collection('users').doc(currentUser.uid).collection('snCodes').doc(snCode);
-                const doc = await docRef.get();
-                if (!doc.exists) {
-                    alert("This SN Code does not exist!");
-                    return;
-                }
-                await docRef.delete();
-                closeRemoveModal();
-                loadData();
-                alert("Successfully removed!");
-            } catch (err) {
-                alert("Error removing data: " + err.message);
-            }
+        window.closeDetailModal = function() {
+            document.getElementById('detailModalBackdrop').classList.remove('active');
+            document.getElementById('detailModal').classList.remove('active');
         }
 
-        async function loadData() {
-            if (!currentUser) return;
-            try {
-                const snapshot = await db.collection('users').doc(currentUser.uid).collection('snCodes').orderBy('createdAt', 'desc').get();
-                allItems = [];
-                snapshot.forEach(doc => {
-                    allItems.push(doc.data());
-                });
-                renderGrid(allItems);
-            } catch (err) {
-                console.error("Error loading data:", err);
-            }
+        window.openSoldModal = function() {
+            pendingSoldDevice = null;
+            document.getElementById('soldFormError').classList.add('hidden');
+            document.getElementById('soldFormSuccess').classList.add('hidden');
+            document.getElementById('soldSnCode').value = '';
+            document.getElementById('soldInputStep').classList.remove('hidden');
+            document.getElementById('soldResultStep').classList.add('hidden');
+            document.getElementById('soldBtnText').textContent = "Check & Sold";
+            document.getElementById('soldModalBackdrop').classList.add('active');
+            document.getElementById('soldModal').classList.add('active');
+            setTimeout(() => document.getElementById('soldSnCode').focus(), 100);
         }
 
-        function renderGrid(items) {
-            const grid = document.getElementById('snGrid');
-            const emptyState = document.getElementById('emptyState');
-            const totalCount = document.getElementById('totalCount');
-            
-            grid.innerHTML = '';
-            totalCount.innerText = `${items.length} items`;
-
-            if (items.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
-
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-white border border-gray-200 hover:border-primary p-4 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer text-center flex flex-col items-center justify-center aspect-square";
-                card.onclick = () => showDetail(item);
-                card.innerHTML = `
-                    <span class="text-xs text-gray-400 font-semibold uppercase mb-1">SN Code</span>
-                    <span class="text-sm font-bold text-gray-800 break-all">${item.snCode}</span>
-                `;
-                grid.appendChild(card);
-            });
+        window.closeSoldModal = function() {
+            pendingSoldDevice = null;
+            document.getElementById('soldModalBackdrop').classList.remove('active');
+            document.getElementById('soldModal').classList.remove('active');
         }
 
-        function filterSN() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allItems.filter(item => item.snCode.toLowerCase().includes(query));
-            renderGrid(filtered);
+        function showAuthError(msg) {
+            const errDiv = document.getElementById('authError');
+            errDiv.textContent = msg;
+            errDiv.classList.remove('hidden');
+            document.getElementById('authSuccess').classList.add('hidden');
         }
 
-        function showDetail(item) {
-            document.getElementById('detailSnTitle').innerText = "SN: " + item.snCode;
-            document.getElementById('detailModel').innerText = item.phoneModel;
-            document.getElementById('detailError').innerText = item.errorDiscuss;
-            document.getElementById('detailBought').innerText = item.boughtPrice;
-            document.getElementById('detailSell').innerText = item.sellPrice;
-            document.getElementById('detailModal').classList.remove('hidden');
+        function showAuthSuccess(msg) {
+            const succDiv = document.getElementById('authSuccess');
+            succDiv.textContent = msg;
+            succDiv.classList.remove('hidden');
+            document.getElementById('authError').classList.add('hidden');
         }
+
+        function hideAuthMessages() {
+            document.getElementById('authError').classList.add('hidden');
+            document.getElementById('authSuccess').classList.add('hidden');
+        }
+
+        document.getElementById('addModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeAddModal(); });
+        document.getElementById('detailModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeDetailModal(); });
+        document.getElementById('soldModalBackdrop').addEventListener('click', function(e) { if (e.target === this) window.closeSoldModal(); });
+
+        initApp();
     </script>
 </body>
 </html>
